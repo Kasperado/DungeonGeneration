@@ -231,31 +231,41 @@ function createCorridors() {
     let newCorridor = new Corridor(startRoom.id+targetPoint.id);
     // Check sizes of the rooms and decide if corridor can be straight or if it needs a curve
     let currentTile = startRoom.coreTile;
+    let previousTile;
     let xDiff = abs(startPoint.x - targetPoint.x);
     let yDiff = abs(startPoint.y - targetPoint.y);
     let adjustHorizontal = (xDiff < yDiff);
-    let createdDoorAtStart = false;
     while (true) {
       if (currentTile.posY == targetRoom.coreTile.posY) adjustHorizontal = true;
       if (currentTile.posX == targetRoom.coreTile.posX) adjustHorizontal = false;
       if (adjustHorizontal) {
         // Move x
-        if (currentTile.posX < targetRoom.coreTile.posX) currentTile = currentTile.toSide(1);
-        else if (currentTile.posX > targetRoom.coreTile.posX) currentTile = currentTile.toSide(3);
+        if (currentTile.posX < targetRoom.coreTile.posX) {
+          previousTile = currentTile;
+          currentTile = currentTile.toSide(1);
+        } else if (currentTile.posX > targetRoom.coreTile.posX) {
+          previousTile = currentTile;
+          currentTile = currentTile.toSide(3);
+        }
       } else {
         // Move y
-        if (currentTile.posY < targetRoom.coreTile.posY) currentTile = currentTile.toSide(2);
-        else if (currentTile.posY > targetRoom.coreTile.posY) currentTile = currentTile.toSide(0);
+        if (currentTile.posY < targetRoom.coreTile.posY) {
+          previousTile = currentTile;
+          currentTile = currentTile.toSide(2);
+        } else if (currentTile.posY > targetRoom.coreTile.posY) {
+          previousTile = currentTile;
+          currentTile = currentTile.toSide(0);
+        }
       }
       // If it's void - add to new corridor
       if (currentTile.type == null) newCorridor.addNewTile(currentTile);
-      // Set door when leaving start room
-      if (!createdDoorAtStart && currentTile.owner?.id != startRoom.id) {
-        if (currentTile.toSide(0).owner?.id == startRoom.id) currentTile.toSide(0).door[2] = true;
-        if (currentTile.toSide(1).owner?.id == startRoom.id) currentTile.toSide(1).door[3] = true;
-        if (currentTile.toSide(2).owner?.id == startRoom.id) currentTile.toSide(2).door[0] = true;
-        if (currentTile.toSide(3).owner?.id == startRoom.id) currentTile.toSide(3).door[1] = true;
-        createdDoorAtStart = true;
+      // Create door when needed
+      let bothRoom = currentTile.type == TileType.ROOM && previousTile.type == TileType.ROOM;
+      if (currentTile.owner.id != previousTile.owner.id && (currentTile.type != previousTile.type || bothRoom)) {
+        if (currentTile.toSide(0).id == previousTile.id) currentTile.toSide(0).door[2] = true;
+        if (currentTile.toSide(1).id == previousTile.id) currentTile.toSide(1).door[3] = true;
+        if (currentTile.toSide(2).id == previousTile.id) currentTile.toSide(2).door[0] = true;
+        if (currentTile.toSide(3).id == previousTile.id) currentTile.toSide(3).door[1] = true;
       }
       // Check if hit another corridor
       // TODO might cause unreachable rooms / check if hit corridor can lead to target room
@@ -263,16 +273,8 @@ function createCorridors() {
       //if (currentTile.toSide(1).type == TileType.CORRIDOR && currentTile.toSide(1).owner?.id != newCorridor.id) break;
       //if (currentTile.toSide(2).type == TileType.CORRIDOR && currentTile.toSide(2).owner?.id != newCorridor.id) break;
       //if (currentTile.toSide(3).type == TileType.CORRIDOR && currentTile.toSide(3).owner?.id != newCorridor.id) break;
-      // Reached room
-      if (currentTile.type == TileType.ROOM && currentTile.owner.id == targetRoom.id) {
-        // Create door at target room
-        if (currentTile.toSide(0).type == TileType.CORRIDOR && currentTile.toSide(0).owner?.id == newCorridor.id) currentTile.toSide(0).door[2] = true;
-        if (currentTile.toSide(1).type == TileType.CORRIDOR && currentTile.toSide(1).owner?.id == newCorridor.id) currentTile.toSide(1).door[3] = true;
-        if (currentTile.toSide(2).type == TileType.CORRIDOR && currentTile.toSide(2).owner?.id == newCorridor.id) currentTile.toSide(2).door[0] = true;
-        if (currentTile.toSide(3).type == TileType.CORRIDOR && currentTile.toSide(3).owner?.id == newCorridor.id) currentTile.toSide(3).door[1] = true;
-        // Found room - break loop
-        break;
-      } 
+      // Reached target room
+      if (currentTile.type == TileType.ROOM && currentTile.owner.id == targetRoom.id) break;
     }
   }
 }
