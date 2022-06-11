@@ -228,12 +228,17 @@ function createCorridors() {
     let startRoom = startPoint.room;
     let targetPoint = allConnections[p + 1];
     let targetRoom = targetPoint.room;
-    let newCorridor = new Corridor(startRoom.id+targetPoint.id);
+    drillCorridor(startRoom, targetRoom);
+  }
+}
+
+function drillCorridor(startRoom, targetRoom) {
+  let newCorridor = new Corridor(startRoom.id+targetRoom.id);
     // Check sizes of the rooms and decide if corridor can be straight or if it needs a curve
     let currentTile = startRoom.coreTile;
     let previousTile;
-    let xDiff = abs(startPoint.x - targetPoint.x);
-    let yDiff = abs(startPoint.y - targetPoint.y);
+  let xDiff = abs(startRoom.x - targetRoom.x);
+  let yDiff = abs(startRoom.y - targetRoom.y);
     let adjustHorizontal = (xDiff < yDiff);
     while (true) {
       if (currentTile.posY == targetRoom.coreTile.posY) adjustHorizontal = true;
@@ -266,16 +271,28 @@ function createCorridors() {
         if (currentTile.toSide(1).id == previousTile.id) currentTile.toSide(1).door[3] = true;
         if (currentTile.toSide(2).id == previousTile.id) currentTile.toSide(2).door[0] = true;
         if (currentTile.toSide(3).id == previousTile.id) currentTile.toSide(3).door[1] = true;
+    }
+    // Check if hit another corridor, if so check if hit corridor leads to target room
+    let corridorToCheck = null;
+    for (let i = 0; i < 4; i++) {
+      if (currentTile.toSide(i).type == TileType.CORRIDOR && currentTile.toSide(i).owner?.id != newCorridor.id) corridorToCheck = currentTile.toSide(i).owner;  
+    }
+    if (corridorToCheck) {
+      // Go through every tile of the corridor and check if it's bordering target room with door
+      let loopBroken = true;
+      for (let i = 0; i < corridorToCheck.tiles.length; i++) {
+        const tile = corridorToCheck.tiles[i];
+        if (tile.toSide(0).owner?.id == targetRoom.id && tile.toSide(0).door[2]) break;
+        if (tile.toSide(1).owner?.id == targetRoom.id && tile.toSide(1).door[3]) break;
+        if (tile.toSide(2).owner?.id == targetRoom.id && tile.toSide(2).door[0]) break;
+        if (tile.toSide(3).owner?.id == targetRoom.id && tile.toSide(3).door[1]) break;
+        loopBroken = false;
       }
-      // Check if hit another corridor
-      // TODO might cause unreachable rooms / check if hit corridor can lead to target room
-      //if (currentTile.toSide(0).type == TileType.CORRIDOR && currentTile.toSide(0).owner?.id != newCorridor.id) break;
-      //if (currentTile.toSide(1).type == TileType.CORRIDOR && currentTile.toSide(1).owner?.id != newCorridor.id) break;
-      //if (currentTile.toSide(2).type == TileType.CORRIDOR && currentTile.toSide(2).owner?.id != newCorridor.id) break;
-      //if (currentTile.toSide(3).type == TileType.CORRIDOR && currentTile.toSide(3).owner?.id != newCorridor.id) break;
+      if (loopBroken) console.log(currentTile);
+      if (loopBroken) break; // Break out of the loop
+    }
       // Reached target room
       if (currentTile.type == TileType.ROOM && currentTile.owner.id == targetRoom.id) break;
-    }
   }
 }
 // Check tiles and their neighbors - if they belong to same entity, remove walls
