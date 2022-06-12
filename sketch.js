@@ -286,6 +286,33 @@ function drillCorridor(startRoom, targetRoom) {
     for (let i = 0; i < 4; i++) {
       if (currentTile.toSide(i).type == TileType.CORRIDOR && currentTile.toSide(i).owner?.id != newCorridor.id) hitTile = currentTile.toSide(i);  
     }
+    // If recently left room, this means that it found the correct corridor instantly (or after cutting through other room first)
+    if (hitTile && previousTile.type == TileType.ROOM && currentTile.type == TileType.CORRIDOR) {
+      // I need to check if there is door next to newly created door
+      let needCleaning = false;
+      // North or South
+      if (currentTile.door[0] || currentTile.door[2]) {
+        if (currentTile.toSide(1).door[0] || currentTile.toSide(1).door[2]) needCleaning = true;
+        if (currentTile.toSide(3).door[0] || currentTile.toSide(3).door[2]) needCleaning = true;
+      }
+      // Left or Right
+      if (currentTile.door[1] || currentTile.door[3]) {
+        if (currentTile.toSide(0).door[1] || currentTile.toSide(0).door[3]) needCleaning = true;
+        if (currentTile.toSide(2).door[1] || currentTile.toSide(2).door[3]) needCleaning = true;
+      }
+      // Return tile to void
+      if (needCleaning) {
+        // Reset neighbors door
+        if (currentTile.door[0]) currentTile.toSide(0).door[2] = false;
+        if (currentTile.door[1]) currentTile.toSide(1).door[3] = false;
+        if (currentTile.door[2]) currentTile.toSide(2).door[0] = false;
+        if (currentTile.door[3]) currentTile.toSide(3).door[1] = false;
+        // Reset current tile
+        currentTile.type = null;
+        currentTile.door = [false, false, false, false];
+      }
+    }
+
     // Check if starting from hit corridor tile we can reach target room
     if (hitTile) {
       let loopBroken = false;
