@@ -272,23 +272,35 @@ function drillCorridor(startRoom, targetRoom) {
         if (currentTile.toSide(2).id == previousTile.id) currentTile.toSide(2).door[0] = true;
         if (currentTile.toSide(3).id == previousTile.id) currentTile.toSide(3).door[1] = true;
     }
-    // Check if hit another corridor, if so check if hit corridor leads to target room
-    let corridorToCheck = null;
+    // Check if hit another corridor
+    let hitTile = null;
     for (let i = 0; i < 4; i++) {
-      if (currentTile.toSide(i).type == TileType.CORRIDOR && currentTile.toSide(i).owner?.id != newCorridor.id) corridorToCheck = currentTile.toSide(i).owner;  
+      if (currentTile.toSide(i).type == TileType.CORRIDOR && currentTile.toSide(i).owner?.id != newCorridor.id) hitTile = currentTile.toSide(i);  
     }
-    if (corridorToCheck) {
-      // Go through every tile of the corridor and check if it's bordering target room with door
-      let loopBroken = true;
-      for (let i = 0; i < corridorToCheck.tiles.length; i++) {
-        const tile = corridorToCheck.tiles[i];
-        if (tile.toSide(0).owner?.id == targetRoom.id && tile.toSide(0).door[2]) break;
-        if (tile.toSide(1).owner?.id == targetRoom.id && tile.toSide(1).door[3]) break;
-        if (tile.toSide(2).owner?.id == targetRoom.id && tile.toSide(2).door[0]) break;
-        if (tile.toSide(3).owner?.id == targetRoom.id && tile.toSide(3).door[1]) break;
-        loopBroken = false;
+    // Check if starting from hit corridor tile we can reach target room
+    if (hitTile) {
+      let loopBroken = false;
+      let tilesToCheck = [hitTile];
+      let doneTilesIDs = [];
+      while (tilesToCheck.length > 0) {
+        let randTilesIndex = floor(random(0, tilesToCheck.length));
+        let tile = tilesToCheck[randTilesIndex];
+        // Check for target room
+        if (tile.toSide(0).owner?.id == targetRoom.id && tile.toSide(0).door[2]) loopBroken = true;
+        if (tile.toSide(1).owner?.id == targetRoom.id && tile.toSide(1).door[3]) loopBroken = true;
+        if (tile.toSide(2).owner?.id == targetRoom.id && tile.toSide(2).door[0]) loopBroken = true;
+        if (tile.toSide(3).owner?.id == targetRoom.id && tile.toSide(3).door[1]) loopBroken = true;
+        // Check for neighboring corridor tiles
+        if (tile.toSide(0).type == TileType.CORRIDOR && !doneTilesIDs.includes(tile.toSide(0).id)) tilesToCheck.push(tile.toSide(0));
+        if (tile.toSide(1).type == TileType.CORRIDOR && !doneTilesIDs.includes(tile.toSide(1).id)) tilesToCheck.push(tile.toSide(1));
+        if (tile.toSide(2).type == TileType.CORRIDOR && !doneTilesIDs.includes(tile.toSide(2).id)) tilesToCheck.push(tile.toSide(2));
+        if (tile.toSide(3).type == TileType.CORRIDOR && !doneTilesIDs.includes(tile.toSide(3).id)) tilesToCheck.push(tile.toSide(3));
+        // Remove checked
+        doneTilesIDs.push(tile.id);
+        tilesToCheck.splice(randTilesIndex, 1);
+        // Found target room
+        if (loopBroken) break;
       }
-      if (loopBroken) console.log(currentTile);
       if (loopBroken) break; // Break out of the loop
     }
       // Reached target room
