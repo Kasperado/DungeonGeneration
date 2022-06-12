@@ -267,10 +267,19 @@ function drillCorridor(startRoom, targetRoom) {
       // Create door when needed
       let bothRoom = currentTile.type == TileType.ROOM && previousTile.type == TileType.ROOM;
       if (currentTile.owner.id != previousTile.owner.id && (currentTile.type != previousTile.type || bothRoom)) {
-        if (currentTile.toSide(0).id == previousTile.id) currentTile.toSide(0).door[2] = true;
-        if (currentTile.toSide(1).id == previousTile.id) currentTile.toSide(1).door[3] = true;
-        if (currentTile.toSide(2).id == previousTile.id) currentTile.toSide(2).door[0] = true;
-        if (currentTile.toSide(3).id == previousTile.id) currentTile.toSide(3).door[1] = true;
+      if (currentTile.toSide(0).id == previousTile.id) {
+        currentTile.door[0] = true;
+        currentTile.toSide(0).door[2] = true;
+      } else if (currentTile.toSide(1).id == previousTile.id) {
+        currentTile.door[1] = true;
+        currentTile.toSide(1).door[3] = true;
+      } else if (currentTile.toSide(2).id == previousTile.id) {
+        currentTile.door[2] = true;
+        currentTile.toSide(2).door[0] = true;
+      } else if (currentTile.toSide(3).id == previousTile.id) {
+        currentTile.door[3] = true;
+        currentTile.toSide(3).door[1] = true;
+      }
     }
     // Check if hit another corridor
     let hitTile = null;
