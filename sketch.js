@@ -18,7 +18,6 @@ let gridTiles = {};
 function setup() {
   createCanvas(canvasWidth, canvasHeight);
   // Set seed 
-  // Seeds to test: 8525 - doors next to each other, 1326 - corridor next to another, 3364 - both
   let seed = floor(random(0, 10000));
   randomSeed(seed);
   console.log(seed);
@@ -263,7 +262,16 @@ function drillCorridor(startRoom, targetRoom) {
         }
       }
       // If it's void - add to new corridor
-      if (currentTile.type == null) newCorridor.addNewTile(currentTile);
+    if (currentTile.type == null) { 
+      newCorridor.addNewTile(currentTile);
+    } else if (currentTile.type == TileType.CORRIDOR && currentTile.owner.id != newCorridor.id) {
+      // If used tile already has an owner, then fuse it with newCorridor (usually when leaving room)
+      for (let i = 0; i < newCorridor.tiles.length; i++) {
+        const t = newCorridor.tiles[i];
+        currentTile.owner.addNewTile(t);
+      }
+      newCorridor = currentTile.owner;
+    }
       // Create door when needed
       let bothRoom = currentTile.type == TileType.ROOM && previousTile.type == TileType.ROOM;
       if (currentTile.owner.id != previousTile.owner.id && (currentTile.type != previousTile.type || bothRoom)) {
@@ -286,19 +294,52 @@ function drillCorridor(startRoom, targetRoom) {
     for (let i = 0; i < 4; i++) {
       if (currentTile.toSide(i).type == TileType.CORRIDOR && currentTile.toSide(i).owner?.id != newCorridor.id) hitTile = currentTile.toSide(i);  
     }
+    
+    // Check if starting from hit corridor tile we can reach target room
+    if (hitTile) {
+      let loopBroken = false;
+      let tilesToCheck = [hitTile];
+      let doneTilesIDs = [];
+      while (tilesToCheck.length > 0) {
+        let randTilesIndex = floor(random(0, tilesToCheck.length));
+        let tile = tilesToCheck[randTilesIndex];
+        // Check for target room
+        if (tile.toSide(0).owner?.id == targetRoom.id && tile.door[0]) loopBroken = true;
+        if (tile.toSide(1).owner?.id == targetRoom.id && tile.door[1]) loopBroken = true;
+        if (tile.toSide(2).owner?.id == targetRoom.id && tile.door[2]) loopBroken = true;
+        if (tile.toSide(3).owner?.id == targetRoom.id && tile.door[3]) loopBroken = true;
+        // Check for neighboring corridor tiles
+        if (tile.toSide(0).type == TileType.CORRIDOR && !doneTilesIDs.includes(tile.toSide(0).id) && tile.owner.id != currentTile.owner.id) tilesToCheck.push(tile.toSide(0));
+        if (tile.toSide(1).type == TileType.CORRIDOR && !doneTilesIDs.includes(tile.toSide(1).id) && tile.owner.id != currentTile.owner.id) tilesToCheck.push(tile.toSide(1));
+        if (tile.toSide(2).type == TileType.CORRIDOR && !doneTilesIDs.includes(tile.toSide(2).id) && tile.owner.id != currentTile.owner.id) tilesToCheck.push(tile.toSide(2));
+        if (tile.toSide(3).type == TileType.CORRIDOR && !doneTilesIDs.includes(tile.toSide(3).id) && tile.owner.id != currentTile.owner.id) tilesToCheck.push(tile.toSide(3));
+        // Remove checked
+        doneTilesIDs.push(tile.id);
+        tilesToCheck.splice(randTilesIndex, 1);
+        // Found target room
+        if (loopBroken) {
+          // Transfer tiles to hit corridor
+          for (let i = 0; i < newCorridor.tiles.length; i++) {
+            const t = newCorridor.tiles[i];
+            hitTile.owner.addNewTile(t);
+          }
+          // Stop while loop
+          break;
+        } 
+      }
     // If recently left room, this means that it found the correct corridor instantly (or after cutting through other room first)
-    if (hitTile && previousTile.type == TileType.ROOM && currentTile.type == TileType.CORRIDOR) {
+      if (previousTile.type == TileType.ROOM && currentTile.type == TileType.CORRIDOR) {
       // I need to check if there is door next to newly created door
       let needCleaning = false;
       // North or South
       if (currentTile.door[0] || currentTile.door[2]) {
-        if (currentTile.toSide(1).door[0] || currentTile.toSide(1).door[2]) needCleaning = true;
-        if (currentTile.toSide(3).door[0] || currentTile.toSide(3).door[2]) needCleaning = true;
+          if ((currentTile.toSide(1).door[0] || currentTile.toSide(1).door[2]) && currentTile.toSide(1).owner?.id == currentTile.owner.id) needCleaning = true;
+          if ((currentTile.toSide(3).door[0] || currentTile.toSide(3).door[2]) && currentTile.toSide(3).owner?.id == currentTile.owner.id) needCleaning = true;
       }
       // Left or Right
       if (currentTile.door[1] || currentTile.door[3]) {
-        if (currentTile.toSide(0).door[1] || currentTile.toSide(0).door[3]) needCleaning = true;
-        if (currentTile.toSide(2).door[1] || currentTile.toSide(2).door[3]) needCleaning = true;
+          if ((currentTile.toSide(0).door[1] || currentTile.toSide(0).door[3]) && currentTile.toSide(0).owner?.id == currentTile.owner.id) needCleaning = true;
+          if ((currentTile.toSide(2).door[1] || currentTile.toSide(2).door[3]) && currentTile.toSide(2).owner?.id == currentTile.owner.id) needCleaning = true;
       }
       // Return tile to void
       if (needCleaning) {
@@ -312,32 +353,8 @@ function drillCorridor(startRoom, targetRoom) {
         currentTile.door = [false, false, false, false];
       }
     }
-
-    // Check if starting from hit corridor tile we can reach target room
-    if (hitTile) {
-      let loopBroken = false;
-      let tilesToCheck = [hitTile];
-      let doneTilesIDs = [];
-      while (tilesToCheck.length > 0) {
-        let randTilesIndex = floor(random(0, tilesToCheck.length));
-        let tile = tilesToCheck[randTilesIndex];
-        // Check for target room
-        if (tile.toSide(0).owner?.id == targetRoom.id && tile.toSide(0).door[2]) loopBroken = true;
-        if (tile.toSide(1).owner?.id == targetRoom.id && tile.toSide(1).door[3]) loopBroken = true;
-        if (tile.toSide(2).owner?.id == targetRoom.id && tile.toSide(2).door[0]) loopBroken = true;
-        if (tile.toSide(3).owner?.id == targetRoom.id && tile.toSide(3).door[1]) loopBroken = true;
-        // Check for neighboring corridor tiles
-        if (tile.toSide(0).type == TileType.CORRIDOR && !doneTilesIDs.includes(tile.toSide(0).id)) tilesToCheck.push(tile.toSide(0));
-        if (tile.toSide(1).type == TileType.CORRIDOR && !doneTilesIDs.includes(tile.toSide(1).id)) tilesToCheck.push(tile.toSide(1));
-        if (tile.toSide(2).type == TileType.CORRIDOR && !doneTilesIDs.includes(tile.toSide(2).id)) tilesToCheck.push(tile.toSide(2));
-        if (tile.toSide(3).type == TileType.CORRIDOR && !doneTilesIDs.includes(tile.toSide(3).id)) tilesToCheck.push(tile.toSide(3));
-        // Remove checked
-        doneTilesIDs.push(tile.id);
-        tilesToCheck.splice(randTilesIndex, 1);
-        // Found target room
+      // Break out of the loop
         if (loopBroken) break;
-      }
-      if (loopBroken) break; // Break out of the loop
     }
       // Reached target room
       if (currentTile.type == TileType.ROOM && currentTile.owner.id == targetRoom.id) break;
@@ -359,7 +376,8 @@ function removeWalls() {
       for (let i = 0; i < arr.length; i++) {
         const edgeTile = arr[i];
         if (edgeTile?.type != null) {
-          if (edgeTile.owner.id == currentTile.owner.id || (currentTile.type == TileType.CORRIDOR && edgeTile.type == TileType.CORRIDOR)) currentTile.gap[i] = true;
+          let sameOwner = (edgeTile.owner.id == currentTile.owner.id);
+          if (sameOwner) currentTile.gap[i] = true;
         }
       }
     }
