@@ -244,8 +244,8 @@ function drillCorridor(startRoom, targetRoom) {
   // Check sizes of the rooms and decide if corridor can be straight or if it needs a curve
   let currentTile = startRoom.coreTile;
   let previousTile;
-  let xDiff = abs(startRoom.x - targetRoom.x);
-  let yDiff = abs(startRoom.y - targetRoom.y);
+  let xDiff = abs(currentTile.x - targetRoom.coreTile.x);
+  let yDiff = abs(currentTile.y - targetRoom.coreTile.y);
   let adjustHorizontal = (xDiff < yDiff);
   while (true) {
     if (currentTile.posY == targetRoom.coreTile.posY) adjustHorizontal = true;
