@@ -241,9 +241,43 @@ function createCorridors() {
 // Creates corridor from startRoom to targetRoom by going through the grid tile by tile and utilizing any existing corridors that may help
 function drillCorridor(startRoom, targetRoom) {
   let newCorridor = new Corridor(startRoom.id+targetRoom.id);
-  // Check sizes of the rooms and decide if corridor can be straight or if it needs a curve
   let currentTile = startRoom.coreTile;
   let previousTile;
+  // Before the drilling we should check if which room tile is the closest to the target and if there is corridor tile connected to the room that is closer
+  let candidateCorridors = [];
+  let closestDistance = dist(currentTile.x, currentTile.y, targetRoom.coreTile.x, targetRoom.coreTile.y);
+  for (let i = 0; i < startRoom.tiles.length; i++) {
+    let tile = startRoom.tiles[i];
+    // Update currentTile with room tiles
+    let dis = dist(tile.x, tile.y, targetRoom.coreTile.x, targetRoom.coreTile.y);
+    if (dis < closestDistance) {
+      closestDistance = dis;
+      currentTile = tile;
+    }
+    // Check if there is corridor next to the tile
+    if (tile.door[0]) candidateCorridors.push(tile.toSide(0).owner);
+    if (tile.door[1]) candidateCorridors.push(tile.toSide(1).owner);
+    if (tile.door[2]) candidateCorridors.push(tile.toSide(2).owner);
+    if (tile.door[3]) candidateCorridors.push(tile.toSide(3).owner);
+  }
+  // Extract the corridor tiles
+  candidateCorridors = [...new Set(candidateCorridors)];
+  candidateTiles = [];
+  for (let i = 0; i < candidateCorridors.length; i++) {
+    for (let x = 0; x < candidateCorridors[i].tiles.length; x++) {
+      candidateTiles.push(candidateCorridors[i].tiles[x]);
+    }
+  }
+  // Check currentTile with corridor tiles
+  for (let i = 0; i < candidateTiles.length; i++) {
+    let tile = candidateTiles[i];
+    let dis = dist(tile.x, tile.y, targetRoom.coreTile.x, targetRoom.coreTile.y);
+    if (dis < closestDistance) {
+      closestDistance = dis;
+      currentTile = tile; newCorridor = tile.owner;
+    }
+  }
+  // Start the drilling
   let xDiff = abs(currentTile.x - targetRoom.coreTile.x);
   let yDiff = abs(currentTile.y - targetRoom.coreTile.y);
   let adjustHorizontal = (xDiff < yDiff);
