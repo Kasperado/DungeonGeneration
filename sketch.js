@@ -19,8 +19,8 @@ const maxDistance = pointsSpaceBetween * 2;
 let allPoints = [];
 let allConnections = []; // All unique connections between the points
 let allTiles = [];
-let allRoomTiles = [];
 let allRooms = [];
+let allCorridors = [];
 let gridTiles = {};
 
 function setup() {
@@ -28,7 +28,6 @@ function setup() {
   // Set seed
   let seed = floor(random(0, 10000));
   randomSeed(seed);
-  console.log(seed);
   // Create grid of tiles
   createGrid();
   // Create random points
@@ -41,8 +40,17 @@ function setup() {
   createRooms();
   // Create corridors
   createCorridors();
+  allCorridors = [...new Set(allCorridors)];
   // Remove walls
   removeWalls();
+  // Post generation report
+  console.log("Seed: " + seed);
+  console.log("Connections: " + allConnections.length / 2);
+  console.log("Rooms/Points: " + allRooms.length);
+  console.log("Corridors: " + allCorridors.length);
+  console.log("Total tiles amount: " + allTiles.length);
+  console.log("Tiles used for rooms: " + allRooms.map(r => r.tiles.length).reduce((v1, v2) => v1 + v2, 0));
+  console.log("Tiles used for corridors: " + allCorridors.map(c => c.tiles.length).reduce((v1, v2) => v1 + v2, 0));
 }
 
 function draw() {
@@ -189,6 +197,7 @@ function checkNeighbors(startPoint, targetPoint, maxDepth) {
 }
 // Creates rooms with random sizes
 function createRooms() {
+  let allRoomCoreTiles = [];
   // Check which points are inside which tiles and spawn core room there
   for (let t = 0; t < allTiles.length; t++) {
     let tile = allTiles[t]; 
@@ -198,14 +207,15 @@ function createRooms() {
         point.tile = tile;
         point.room = new Room(point.x +""+ point.y);
         point.room.addNewTile(tile);
+        allRooms.push(point.room);
         tile.type = TileType.ROOM;
-        allRoomTiles.push(tile);
+        allRoomCoreTiles.push(tile);
       } 
     }
   }
   // Expand core rooms into full rooms
-  for (let r = 0; r < allRoomTiles.length; r++) {
-    let coreRoom = allRoomTiles[r];
+  for (let r = 0; r < allRoomCoreTiles.length; r++) {
+    let coreRoom = allRoomCoreTiles[r];
     // Set size of room
     let xSize = floor(random(minRoomSize, maxRoomSize + 1));
     let ySize = floor(random(minRoomSize, maxRoomSize + 1));
@@ -221,9 +231,8 @@ function createRooms() {
       for (let y = -floor(ySize/2); y < ceil(ySize/2); y++) {
         if (x == 0 & y == 0) continue; // Skip middle
         let tileString = "x" + (coreRoom.posX + x) + "y" + (coreRoom.posY + y);
-        if (gridTiles[tileString]) {
-          coreRoom.owner.addNewTile(gridTiles[tileString]);
-        }
+        let tile = gridTiles[tileString];
+        if (tile) coreRoom.owner.addNewTile(tile);
       }
     }
   }
@@ -373,7 +382,10 @@ function drillCorridor(startRoom, targetRoom) {
       if (loopBroken) break; 
     }
     // Reached target room
-    if (currentTile.type == TileType.ROOM && currentTile.owner.id == targetRoom.id) break;
+    if (currentTile.type == TileType.ROOM && currentTile.owner.id == targetRoom.id) {
+      allCorridors.push(newCorridor);
+      break;
+    }
   }
 }
 // Check tiles and their neighbors - if they belong to same entity, remove walls
