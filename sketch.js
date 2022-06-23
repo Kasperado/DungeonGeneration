@@ -241,15 +241,16 @@ function createCorridors() {
 // Creates corridor from startRoom to targetRoom by going through the grid tile by tile and utilizing any existing corridors that may help
 function drillCorridor(startRoom, targetRoom) {
   let newCorridor = new Corridor(startRoom.id+targetRoom.id);
-  let currentTile = startRoom.coreTile;
+  let currentTile = startRoom.coreTile; // Tile where corridor will start
+  let targetTile = targetRoom.coreTile; // Tile where corridor will end
   let previousTile;
   // Before the drilling we should check if which room tile is the closest to the target and if there is corridor tile connected to the room that is closer
   let candidateCorridors = [];
-  let closestDistance = dist(currentTile.x, currentTile.y, targetRoom.coreTile.x, targetRoom.coreTile.y);
+  let closestDistance = dist(currentTile.x, currentTile.y, targetTile.x, targetTile.y);
   for (let i = 0; i < startRoom.tiles.length; i++) {
     let tile = startRoom.tiles[i];
     // Update currentTile with room tiles
-    let dis = dist(tile.x, tile.y, targetRoom.coreTile.x, targetRoom.coreTile.y);
+    let dis = dist(tile.x, tile.y, targetTile.x, targetTile.y);
     if (dis < closestDistance) {
       closestDistance = dis;
       currentTile = tile;
@@ -271,38 +272,25 @@ function drillCorridor(startRoom, targetRoom) {
   // Check currentTile with corridor tiles
   for (let i = 0; i < candidateTiles.length; i++) {
     let tile = candidateTiles[i];
-    let dis = dist(tile.x, tile.y, targetRoom.coreTile.x, targetRoom.coreTile.y);
+    let dis = dist(tile.x, tile.y, targetTile.x, targetTile.y);
     if (dis < closestDistance) {
       closestDistance = dis;
       currentTile = tile; newCorridor = tile.owner;
     }
   }
-  // Start the drilling
-  let xDiff = abs(currentTile.x - targetRoom.coreTile.x);
-  let yDiff = abs(currentTile.y - targetRoom.coreTile.y);
+  // Set initial direction
+  let xDiff = abs(currentTile.x - targetTile.x);
+  let yDiff = abs(currentTile.y - targetTile.y);
   let adjustHorizontal = (xDiff < yDiff);
+  // Start the drilling
   while (true) {
-    if (currentTile.posY == targetRoom.coreTile.posY) adjustHorizontal = true;
-    if (currentTile.posX == targetRoom.coreTile.posX) adjustHorizontal = false;
-    if (adjustHorizontal) {
-      // Move x
-      if (currentTile.posX < targetRoom.coreTile.posX) {
+    // Set direction
+    if (currentTile.posY == targetTile.posY) adjustHorizontal = true;
+    if (currentTile.posX == targetTile.posX) adjustHorizontal = false;
+    // Move in the desired direction
         previousTile = currentTile;
-        currentTile = currentTile.toSide(1);
-      } else if (currentTile.posX > targetRoom.coreTile.posX) {
-        previousTile = currentTile;
-        currentTile = currentTile.toSide(3);
-      }
-    } else {
-      // Move y
-      if (currentTile.posY < targetRoom.coreTile.posY) {
-        previousTile = currentTile;
-        currentTile = currentTile.toSide(2);
-      } else if (currentTile.posY > targetRoom.coreTile.posY) {
-        previousTile = currentTile;
-        currentTile = currentTile.toSide(0);
-      }
-    } 
+    if (adjustHorizontal) currentTile = (currentTile.posX < targetTile.posX) ? currentTile.toSide(1) : currentTile.toSide(3);
+    else currentTile = (currentTile.posY < targetTile.posY) ? currentTile.toSide(2) : currentTile.toSide(0);
     // If it's void - add to new corridor
     if (currentTile.type == null) { 
       newCorridor.addNewTile(currentTile);
