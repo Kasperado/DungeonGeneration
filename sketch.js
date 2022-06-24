@@ -14,6 +14,11 @@ const allowSquareRooms = false;
 // Circular path generations
 const minNeighborsAway = 4;
 const maxDistance = pointsSpaceBetween * 2;
+// Corridor generation
+const useBestStartRoomTile = true;
+const useBestTargetRoomTile = true;
+const useBestStartRoomCorridor = true;
+const useBestTargetRoomCorridor = true;
 
 // Data
 let allPoints = [];
@@ -232,7 +237,7 @@ function createRooms() {
         if (x == 0 & y == 0) continue; // Skip middle
         let tileString = "x" + (coreRoom.posX + x) + "y" + (coreRoom.posY + y);
         let tile = gridTiles[tileString];
-        if (tile) coreRoom.owner.addNewTile(tile);
+        if (tile?.owner == null) coreRoom.owner.addNewTile(tile);
       }
     }
   }
@@ -253,39 +258,26 @@ function drillCorridor(startRoom, targetRoom) {
   let currentTile = startRoom.coreTile; // Tile where corridor will start
   let targetTile = targetRoom.coreTile; // Tile where corridor will end
   let previousTile;
-  // Before the drilling we should check if which room tile is the closest to the target and if there is corridor tile connected to the room that is closer
-  let candidateCorridors = [];
-  let closestDistance = dist(currentTile.x, currentTile.y, targetTile.x, targetTile.y);
-  for (let i = 0; i < startRoom.tiles.length; i++) {
-    let tile = startRoom.tiles[i];
-    // Update currentTile with room tiles
-    let dis = dist(tile.x, tile.y, targetTile.x, targetTile.y);
-    if (dis < closestDistance) {
-      closestDistance = dis;
-      currentTile = tile;
-    }
-    // Check if there is corridor next to the tile
-    if (tile.door[0]) candidateCorridors.push(tile.toSide(0).owner);
-    if (tile.door[1]) candidateCorridors.push(tile.toSide(1).owner);
-    if (tile.door[2]) candidateCorridors.push(tile.toSide(2).owner);
-    if (tile.door[3]) candidateCorridors.push(tile.toSide(3).owner);
-  }
-  // Extract the corridor tiles
-  candidateCorridors = [...new Set(candidateCorridors)];
-  candidateTiles = [];
-  for (let i = 0; i < candidateCorridors.length; i++) {
-    for (let x = 0; x < candidateCorridors[i].tiles.length; x++) {
-      candidateTiles.push(candidateCorridors[i].tiles[x]);
+  // Set better start location
+  if (useBestStartRoomTile) currentTile = getClosestTile(startRoom.tiles, targetTile);
+  // Before the drilling we should check if there is corridor tile connected to the room that is closer
+  if (useBestStartRoomCorridor) {
+    let candidateTiles = getCorridorTiles(startRoom);
+    candidateTiles.push(currentTile);
+    let closestCorridorTile = getClosestTile(candidateTiles, targetTile);
+    // Check if the same is closest
+    if (closestCorridorTile.id != currentTile.id) {
+      newCorridor = closestCorridorTile.owner;
+      currentTile = closestCorridorTile;
     }
   }
-  // Check currentTile with corridor tiles
-  for (let i = 0; i < candidateTiles.length; i++) {
-    let tile = candidateTiles[i];
-    let dis = dist(tile.x, tile.y, targetTile.x, targetTile.y);
-    if (dis < closestDistance) {
-      closestDistance = dis;
-      currentTile = tile; newCorridor = tile.owner;
-    }
+  // Set better target location
+  if (useBestTargetRoomTile) targetTile = getClosestTile(targetRoom.tiles, currentTile);
+  if (useBestTargetRoomCorridor) {
+    let candidateTiles = getCorridorTiles(targetRoom);
+    candidateTiles.push(targetTile);
+    let closestCorridorTile = getClosestTile(candidateTiles, currentTile);
+    targetTile = closestCorridorTile;
   }
   // Set initial direction
   let xDiff = abs(currentTile.x - targetTile.x);
@@ -381,12 +373,47 @@ function drillCorridor(startRoom, targetRoom) {
       // Break out of the loop
       if (loopBroken) break; 
     }
-    // Reached target room
-    if (currentTile.type == TileType.ROOM && currentTile.owner.id == targetRoom.id) {
+    // Reached target tile
+    if (currentTile.owner.id == targetTile.owner.id) {
       allCorridors.push(newCorridor);
       break;
     }
   }
+}
+// Searches given array of tiles and returns tile closest to the targetTile
+function getClosestTile(tiles, targetTile) {
+  if (tiles.length == 0) return null;
+  let closestDistance = dist(tiles[0].x, tiles[0].y, targetTile.x, targetTile.y);
+  let closestTile = tiles[0];
+  for (let i = 0; i < tiles.length; i++) {
+    let tile = tiles[i];
+    let distance = dist(tile.x, tile.y, targetTile.x, targetTile.y);
+    if (distance < closestDistance) {
+      closestDistance = distance;
+      closestTile = tile;
+    }
+  }
+  return closestTile;
+}
+// Searches for corridors that lead to this room 
+function getCorridorTiles(room) {
+  let candidateCorridors = [];
+  for (let i = 0; i < room.tiles.length; i++) {
+    let tile = room.tiles[i];
+    // Check if there is corridor next to the tile
+    for (let c = 0; c < 4; c++) {
+      if (tile.door[c] && tile.toSide(c).type == TileType.CORRIDOR) candidateCorridors.push(tile.toSide(c).owner); 
+    }
+  }
+  // Extract the corridor tiles
+  candidateCorridors = [...new Set(candidateCorridors)];
+  candidateTiles = [];
+  for (let i = 0; i < candidateCorridors.length; i++) {
+    for (let x = 0; x < candidateCorridors[i].tiles.length; x++) {
+      candidateTiles.push(candidateCorridors[i].tiles[x]);
+    }
+  }
+  return candidateTiles;
 }
 // Check tiles and their neighbors - if they belong to same entity, remove walls
 function removeWalls() {
