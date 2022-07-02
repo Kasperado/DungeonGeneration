@@ -10,7 +10,8 @@ const roomSize = (canvasHeight / dungeonSize);
 // Room sizes
 const minRoomSize = 3;
 const maxRoomSize = 5;
-const allowSquareRooms = false;
+let allowSquareRooms = false;
+if (minRoomSize == maxRoomSize) allowSquareRooms = true; // Otherwise generation will never complete
 // Circular path generations
 const minNeighborsAway = 4;
 const maxDistance = pointsSpaceBetween * 2;
