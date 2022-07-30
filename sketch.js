@@ -310,7 +310,7 @@ function drillCorridor(startRoom, targetRoom) {
       for (let i = 0; i < 4; i++) {
         if (currentTile.toSide(i).id != previousTile.id) continue;
         currentTile.door[i] = true;
-        currentTile.toSide(i).door[(i + 2) % 4] = true;
+        currentTile.toSide(i).door[reverseDirection(i)] = true;
       }
     }
     // Check if hit another corridor
@@ -362,10 +362,9 @@ function drillCorridor(startRoom, targetRoom) {
         // Return tile to void
         if (needCleaning) {
           // Reset neighbors door
-          if (currentTile.door[0]) currentTile.toSide(0).door[2] = false;
-          if (currentTile.door[1]) currentTile.toSide(1).door[3] = false;
-          if (currentTile.door[2]) currentTile.toSide(2).door[0] = false;
-          if (currentTile.door[3]) currentTile.toSide(3).door[1] = false;
+          for (let i = 0; i < 4; i++) {
+            if (currentTile.door[i]) currentTile.toSide(i).door[reverseDirection(i)] = false;
+          }
           // Reset current tile
           currentTile.type = TileType.NONE;
           currentTile.door = [false, false, false, false];
@@ -433,6 +432,10 @@ function removeWalls() {
       }
     }
   }
+}
+// Reverses 0-3 direction
+function reverseDirection(i) {
+  return (i + 2) % 4;
 }
 
 
