@@ -294,7 +294,7 @@ function drillCorridor(startRoom, targetRoom) {
     if (adjustHorizontal) currentTile = (currentTile.posX < targetTile.posX) ? currentTile.toSide(1) : currentTile.toSide(3);
     else currentTile = (currentTile.posY < targetTile.posY) ? currentTile.toSide(2) : currentTile.toSide(0);
     // If it's void - add to new corridor
-    if (currentTile.type == null) { 
+    if (currentTile.type == TileType.NONE) { 
       newCorridor.addNewTile(currentTile);
     } else if (currentTile.type == TileType.CORRIDOR && currentTile.owner.id != newCorridor.id) {
       // If used tile already has an owner, then fuse it with newCorridor (usually when leaving room)
@@ -367,7 +367,7 @@ function drillCorridor(startRoom, targetRoom) {
           if (currentTile.door[2]) currentTile.toSide(2).door[0] = false;
           if (currentTile.door[3]) currentTile.toSide(3).door[1] = false;
           // Reset current tile
-          currentTile.type = null;
+          currentTile.type = TileType.NONE;
           currentTile.door = [false, false, false, false];
         }
       }
@@ -422,11 +422,11 @@ function removeWalls() {
     for (let y = 0; y < dungeonSize; y++) {
       let currentTile = gridTiles["x" + x + "y" + y];
       if (currentTile == null) continue;
-      if (currentTile.type == null) continue;
+      if (currentTile.type == TileType.NONE) continue;
       // Checks other rooms to set gap
       for (let i = 0; i < 4; i++) {
         const edgeTile = currentTile.toSide(i);
-        if (edgeTile?.type != null) {
+        if (edgeTile?.type != TileType.NONE) {
           let sameOwner = (edgeTile.owner.id == currentTile.owner.id);
           if (sameOwner) currentTile.gap[i] = true;
         }

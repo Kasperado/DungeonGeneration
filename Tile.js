@@ -3,7 +3,7 @@ class Tile {
   id = '';
   posX = 0;
   posY = 0;
-  type; // TileType
+  type = TileType.NONE;
   owner; // Room or Corridor
   gap = [false, false, false, false]; // N E S W // Clockwise
   door = [false, false, false, false]; // N E S W // Clockwise
